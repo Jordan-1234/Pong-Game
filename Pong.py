@@ -20,6 +20,11 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
 # game variables
+main_menu = True
+AI = False
+freeze_game = False
+reset_vars = False
+
 ball_timer = 90
 ball_speed = 7
 ball_xspeed = ball_speed * random.choice((-1, 1))
@@ -28,9 +33,8 @@ paddle_speed = abs(ball_speed - 2)
 player1_speed = 0
 player2_speed = 0
 
-#Set player scores to zero and create font size
+#Set player scores to zero
 scores = {"player 1": 0, "player 2": 0}
-game_font = pygame.font.Font("freesansbold.ttf", 32)
 
 #All positions
 ball_pos = {"x": WIDTH//2, "y": HEIGHT//2}
@@ -42,6 +46,29 @@ ball = pygame.Rect(ball_pos["x"], ball_pos["y"], 20, 20)
 player1 = pygame.Rect(0, 0, 20, 140)
 player2 = pygame.Rect(0, 0, 20, 140)
 
+def draw_text(text_string, text_size, colour, x_pos, y_pos):
+    font = pygame.font.Font("freesansbold.ttf", text_size)
+    text = font.render(text_string, True, colour)
+    text_rect = text.get_rect(center=(x_pos, y_pos))
+    SCREEN.blit(text, text_rect)
+
+def starting_window():
+    global ball_xspeed, ball_yspeed, scores, AI, main_menu, reset_vars
+    if reset_vars:
+        ball_xspeed = ball_speed * random.choice((-1, 1))
+        ball_yspeed = ball_speed * random.choice((-1, 1))
+        scores = {"player 1": 0, "player 2": 0}
+        reset_vars = False
+
+    KEYS = pygame.key.get_pressed()
+    if KEYS[pygame.K_1]:
+        AI = True
+        main_menu = False
+    elif KEYS[pygame.K_2]:
+        main_menu = False
+    draw_text("Pong", 100, WHITE, WIDTH//2, HEIGHT//2 - 100)
+    draw_text("Press 1 for AI", 40, WHITE, WIDTH//2, HEIGHT//2 + 50)
+    draw_text("Press 2 for 2 Players", 40, WHITE, WIDTH//2, HEIGHT//2 + 150)
 
 def drawings_movement(AI):
     global player1_speed, player2_speed
@@ -112,17 +139,15 @@ def ball_collision():
 
 
 def display_drawings():
-    player1_text = game_font.render(str(scores["player 1"]),False, WHITE)
-    SCREEN.blit(player1_text,(WIDTH//2 - 100, 50))
-
-    player2_text = game_font.render(str(scores["player 2"]), False, WHITE)
-    SCREEN.blit(player2_text,(WIDTH//2 + 100, 50))
-
+    draw_text(str(scores["player 1"]), 32, WHITE, WIDTH//2 - 100, 50)
+    draw_text(str(scores["player 2"]), 32, WHITE, WIDTH//2 + 100, 50)
+       
     ball.center = (ball_pos["x"], ball_pos["y"])
     player1.center = (player1_pos["x"], player1_pos["y"])
     player2.center = (player2_pos["x"], player2_pos["y"])
 
-    pygame.draw.ellipse(SCREEN, WHITE, ball)
+    if not freeze_game:
+        pygame.draw.ellipse(SCREEN, WHITE, ball)
     pygame.draw.rect(SCREEN, WHITE, player1)
     pygame.draw.rect(SCREEN, WHITE, player2)
 
@@ -130,16 +155,14 @@ def display_drawings():
 def start_round():
     global ball_timer
     if ball_timer > 60:
-        number_three = game_font.render("3",False,WHITE)
-        SCREEN.blit(number_three,(WIDTH//2 - 10, HEIGHT//2 + 20))
+        draw_text("3", 32, WHITE, WIDTH//2, HEIGHT//2 - 30)
+     
 
-    if 30 < ball_timer < 60 :
-        number_two = game_font.render("2",False,WHITE)
-        SCREEN.blit(number_two,(WIDTH//2 - 10, HEIGHT//2 + 20))
+    if 30 < ball_timer < 60:
+        draw_text("2", 32, WHITE, WIDTH//2, HEIGHT//2 - 30)
 
     if 0 < ball_timer < 30:
-        number_one = game_font.render("1", False, WHITE)
-        SCREEN.blit(number_one,(WIDTH//2 - 10, HEIGHT//2 + 20))
+        draw_text("1", 32, WHITE, WIDTH//2, HEIGHT//2 - 30)
     
     ball_timer -= 1
 
@@ -162,39 +185,47 @@ def reset_ball():
     
 
 def end_game():
+    global main_menu, freeze_game, reset_vars
+    freeze_game = True
     if scores["player 1"] == 10:
-        pass
-
+        draw_text("PLAYER 1 WINS",  60, WHITE, WIDTH//2, HEIGHT//2)
+    elif scores["player 2"] == 10:
+        draw_text("PLAYER 2 WINS",  60, WHITE, WIDTH//2, HEIGHT//2)
+    
+    draw_text("Press Space To Return To Main Menu", 30, WHITE, WIDTH//2, HEIGHT//2 + 100)
+    KEYS = pygame.key.get_pressed()
+    if KEYS[pygame.K_SPACE]:
+        main_menu = True
+        freeze_game = False
+        reset_vars = True
 
 def main():
-    main_menu = True
-    AI = False
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             if event.type == pygame.KEYDOWN:
-                if main_menu:
-                    if event.key == pygame.K_1:
-                        AI = True
-                        main_menu = False
-                    elif event.key == pygame.K_2:
-                        main_menu = False
-
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+        
         SCREEN.fill(BLACK)
 
         if main_menu:
-            pass    # menu code here
+            starting_window()
         else:
-            if ball_timer > 0:
+            if ball_timer > 0 and not freeze_game:
                 start_round()
             else:
                 ball_collision()
-                drawings_movement(AI)
+                if not freeze_game:
+                    drawings_movement(AI)
             display_drawings()
             reset_ball()
-        
+            if scores["player 1"] == 10 or scores["player 2"] == 10:
+                end_game()
+            
+            
         pygame.display.update()
         CLOCK.tick(60)
 
